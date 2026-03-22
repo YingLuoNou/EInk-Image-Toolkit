@@ -24,22 +24,22 @@
 如果你还没有安装 `uv`，可以通过以下命令安装：
 ```bash
 # macOS 或 Linux:
-curl -LsSf [https://astral.sh/uv/install.sh](https://astral.sh/uv/install.sh) | sh
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Windows (在 PowerShell 中运行):
-powershell -ExecutionPolicy ByPass -c "irm [https://astral.sh/uv/install.ps1](https://astral.sh/uv/install.ps1) | iex"
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 🛠️ 安装与运行
 克隆项目到本地：
 
 ```Bash
-git clone [https://github.com/yourusername/EInk-Image-Toolkit.git](https://github.com/yourusername/EInk-Image-Toolkit.git)
+git clone https://github.com/yourusername/EInk-Image-Toolkit.git
 cd EInk-Image-Toolkit
 ```
 使用 uv 添加依赖库：
 
 ```Bash
-uv add numpy pillow
+uv sync
 ```
 启动程序：
 
