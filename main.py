@@ -15,6 +15,7 @@ class EPaperDitheringTool:
             'bw': [(0, 0, 0), (255, 255, 255)],
             '4gray': [(0, 0, 0), (85, 85, 85), (170, 170, 170), (255, 255, 255)],
             '16gray': [(i*17, i*17, i*17) for i in range(16)],
+            '4color': [(0, 0, 0), (255, 255, 255), (255, 255, 0), (255, 0, 0)], # 四色模式：黑、白、黄、红
             '6color': [(0, 0, 0), (255, 255, 255), (0, 255, 0), (0, 0, 255), (255, 0, 0), (255, 255, 0)],
             '7color': [(0, 0, 0), (255, 255, 255), (0, 255, 0), (0, 0, 255), (255, 0, 0), (255, 255, 0), (255, 128, 0)]
         }
@@ -128,6 +129,18 @@ class EPaperDitheringTool:
 class ImageToCArrayConverter:
     def __init__(self):
         self.dither_tool = EPaperDitheringTool()
+        # 【关键修改】：这里预补偿了单片机 Color_get 的移位逻辑
+        # Python输出 -> Color_get处理 -> 硬件实际得到
+        # 0x3        -> 0x00           -> 黑(Black)
+        # 0x0        -> 0x01           -> 白(White)
+        # 0x1        -> 0x02           -> 黄(Yellow)
+        # 0x2        -> 0x03           -> 红(Red)
+        self.palette_4c_map = [
+            ((0, 0, 0),       0x3), # Black (预补偿输出 0x3)
+            ((255, 255, 255), 0x0), # White (预补偿输出 0x0)
+            ((255, 255, 0),   0x1), # Yellow (预补偿输出 0x1)
+            ((255, 0, 0),     0x2)  # Red (预补偿输出 0x2)
+        ]
         self.palette_6c_map = [
             ((0, 0, 0),       0x0), 
             ((255, 255, 255), 0x1), 
@@ -140,6 +153,7 @@ class ImageToCArrayConverter:
 
     def get_palette_by_format(self, fmt_str):
         if "1-bit" in fmt_str or "单色" in fmt_str: return 'bw'
+        if "4-Color" in fmt_str or "四色" in fmt_str: return '4color'
         if "2-bit" in fmt_str or "4灰" in fmt_str: return '4gray'
         if "4-bit" in fmt_str or "16灰" in fmt_str: return '16gray'
         if "6-Color" in fmt_str: return '6color' 
@@ -185,6 +199,16 @@ class ImageToCArrayConverter:
                     data_bytes.append(val)
             else:
                 data_bytes = indices
+
+        elif "4-Color" in fmt or "四色" in fmt:
+            flat = arr.reshape(-1, 3)
+            indices = [self._get_index_from_map(p, self.palette_4c_map) for p in flat]
+            for i in range(0, len(indices), 4):
+                val = 0
+                for j in range(4):
+                    if i+j < len(indices):
+                        val |= (indices[i+j] << (6 - 2*j))
+                data_bytes.append(val)
 
         elif "RGB332" in fmt:
             val = ((r.astype(np.uint16) >> 5) << 5) | ((g.astype(np.uint16) >> 5) << 2) | (b.astype(np.uint16) >> 6)
@@ -293,7 +317,7 @@ class EPaperGUI:
                 'lbl_tw': "目标宽:", 'lbl_th': "高:",
                 'btn_fit': "🔍 居中铺满",
                 'f5': "5. 导出格式 (自动决定调色板)",
-                'fmts': ["GxEPD2 6-Color (Packed E6专用)", "GxEPD2 7-Color (Packed ACeP)", "GxEPD2 7-Color (Standard 1px/byte)", "RGB332 (256色)", "单色 (1-bit)", "4灰 (2-bit)", "16灰 (4-bit)", "4096色 (12-bit)", "16位真彩色 (RGB565)", "24位真彩色 (RGB888)", "32位真彩色 (ARGB8888)"],
+                'fmts': ["GxEPD2 6-Color (Packed E6专用)", "GxEPD2 7-Color (Packed ACeP)", "GxEPD2 7-Color (Standard 1px/byte)", "四色 (4-Color 2-bit)", "RGB332 (256色)", "单色 (1-bit)", "4灰 (2-bit)", "16灰 (4-bit)", "4096色 (12-bit)", "16位真彩色 (RGB565)", "24位真彩色 (RGB888)", "32位真彩色 (ARGB8888)"],
                 'btn_prev': "⚡ 生成预览", 'btn_exp': "💾 导出C数组",
                 'lbl_ready': "就绪",
                 'fo': "交互式裁剪 [按住Shift：水平/垂直锁定 | 按住Ctrl+滚轮：精细微调缩放]",
@@ -324,7 +348,7 @@ class EPaperGUI:
                 'lbl_tw': "Target W:", 'lbl_th': "H:",
                 'btn_fit': "🔍 Center Fit",
                 'f5': "5. Export Format",
-                'fmts': ["GxEPD2 6-Color (Packed E6)", "GxEPD2 7-Color (Packed ACeP)", "GxEPD2 7-Color (Std 1px/byte)", "RGB332 (256 Colors)", "Monochrome (1-bit)", "4-Grayscale (2-bit)", "16-Grayscale (4-bit)", "4096 Colors (12-bit)", "16-bit TrueColor (RGB565)", "24-bit TrueColor (RGB888)", "32-bit TrueColor (ARGB8888)"],
+                'fmts': ["GxEPD2 6-Color (Packed E6)", "GxEPD2 7-Color (Packed ACeP)", "GxEPD2 7-Color (Std 1px/byte)", "4-Color (2-bit)", "RGB332 (256 Colors)", "Monochrome (1-bit)", "4-Grayscale (2-bit)", "16-Grayscale (4-bit)", "4096 Colors (12-bit)", "16-bit TrueColor (RGB565)", "24-bit TrueColor (RGB888)", "32-bit TrueColor (ARGB8888)"],
                 'btn_prev': "⚡ Gen Preview", 'btn_exp': "💾 Export C Array",
                 'lbl_ready': "Ready",
                 'fo': "Interactive Crop [Shift: Lock Axis | Ctrl+Wheel: Fine Zoom]",
