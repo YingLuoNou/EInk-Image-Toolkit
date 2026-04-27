@@ -24,24 +24,28 @@ This project uses [uv](https://github.com/astral-sh/uv), an extremely fast Pytho
 If you don't have `uv` installed, you can install it via:
 ```bash
 # On macOS and Linux.
-curl -LsSf [https://astral.sh/uv/install.sh](https://astral.sh/uv/install.sh) | sh
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # On Windows.
-powershell -ExecutionPolicy ByPass -c "irm [https://astral.sh/uv/install.ps1](https://astral.sh/uv/install.ps1) | iex"
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
 🛠️ Installation & Usage
 Clone the repository:
 
-Bash
-git clone [https://github.com/yingluonou/EInk-Image-Toolkit.git](https://github.com/yingluonou/EInk-Image-Toolkit.git)
+```Bash
+git clone https://github.com/yingluonou/EInk-Image-Toolkit.git
 cd EInk-Image-Toolkit
+```
 Add dependencies using uv:
 
-Bash
-uv add numpy pillow
+```Bash
+uv sync
+```
 Run the application:
 
-Bash
+```Bash
 uv run main.py
+```
 (Note: Replace main.py with the actual filename of your script if it is different).
 
 🖱️ Interactive Controls
