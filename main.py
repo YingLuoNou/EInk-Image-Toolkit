@@ -4,6 +4,62 @@ import numpy as np
 from PIL import Image, ImageTk, ImageEnhance
 import threading
 import os
+from numba import njit  # 新增：引入 Numba JIT 编译器
+
+# ==========================================
+# 新增：使用 Numba JIT 编译的误差扩散核心算法
+# ==========================================
+@njit
+def fast_error_diffusion_jit(img_arr_f32, palette, weights):
+    h, w = img_arr_f32.shape[:2]
+    num_colors = palette.shape[0]
+    
+    for y in range(h):
+        for x in range(w):
+            old_r = img_arr_f32[y, x, 0]
+            old_g = img_arr_f32[y, x, 1]
+            old_b = img_arr_f32[y, x, 2]
+            
+            # 寻找最近颜色
+            min_dist = 1e9
+            best_c_idx = 0
+            for i in range(num_colors):
+                pr = palette[i, 0]
+                pg = palette[i, 1]
+                pb = palette[i, 2]
+                d = (old_r - pr)**2 + (old_g - pg)**2 + (old_b - pb)**2
+                if d < min_dist:
+                    min_dist = d
+                    best_c_idx = i
+                    
+            nr = palette[best_c_idx, 0]
+            ng = palette[best_c_idx, 1]
+            nb = palette[best_c_idx, 2]
+            
+            img_arr_f32[y, x, 0] = nr
+            img_arr_f32[y, x, 1] = ng
+            img_arr_f32[y, x, 2] = nb
+            
+            # 计算误差
+            err_r = old_r - nr
+            err_g = old_g - ng
+            err_b = old_b - nb
+            
+            # 误差扩散
+            for i in range(weights.shape[0]):
+                dx = int(weights[i, 0])
+                dy = int(weights[i, 1])
+                wt = weights[i, 2]
+                
+                nx = x + dx
+                ny = y + dy
+                
+                if 0 <= nx < w and 0 <= ny < h:
+                    img_arr_f32[ny, nx, 0] = min(max(img_arr_f32[ny, nx, 0] + err_r * wt, 0.0), 255.0)
+                    img_arr_f32[ny, nx, 1] = min(max(img_arr_f32[ny, nx, 1] + err_g * wt, 0.0), 255.0)
+                    img_arr_f32[ny, nx, 2] = min(max(img_arr_f32[ny, nx, 2] + err_b * wt, 0.0), 255.0)
+                    
+    return img_arr_f32
 
 # ==========================================
 # 1. 核心抖动逻辑类
@@ -60,22 +116,15 @@ class EPaperDitheringTool:
             if d < min_dist: min_dist = d; nearest = c
         return nearest
 
+    # 修改：调用 Numba 加速方法
     def apply_error_diffusion(self, img_arr, colors, kernel_name='Floyd-Steinberg'):
-        h, w = img_arr.shape[:2]
-        res = img_arr.copy().astype(np.float32)
-        weights = self.kernels.get(kernel_name, self.kernel_fs)
+        weights = np.array(self.kernels.get(kernel_name, self.kernel_fs), dtype=np.float32)
+        palette = np.array(colors, dtype=np.float32)
+        img_arr_f32 = img_arr.astype(np.float32)
         
-        for y in range(h):
-            for x in range(w):
-                old = res[y, x].copy()
-                nearest = self.find_nearest_color(old, colors)
-                res[y, x] = nearest
-                err = old - nearest
-                for dx, dy, wt in weights:
-                    nx, ny = x + dx, y + dy
-                    if 0 <= nx < w and 0 <= ny < h:
-                        res[ny, nx] = np.clip(res[ny, nx] + err * wt, 0, 255)
-        return res.astype(np.uint8)
+        # 调用 JIT 编译的快速函数
+        res_f32 = fast_error_diffusion_jit(img_arr_f32, palette, weights)
+        return res_f32.astype(np.uint8)
 
     def apply_no_dithering(self, img_arr, colors):
         h, w = img_arr.shape[:2]
