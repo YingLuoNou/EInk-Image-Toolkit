@@ -17,7 +17,19 @@ A powerful, interactive GUI application designed specifically for preparing, pro
 * **Hardware Scan Modes**: Configure horizontal/vertical scanning, data mirroring, flipping, and nibble swapping to match your specific screen's hardware wiring.
 * **Bilingual UI**: Switch seamlessly between English and Chinese on the fly without losing your current progress.
 
-## 🚀 Prerequisites
+## 🚀 Download and Run (Windows Standalone)
+
+You don't need to install Python or configure any environments to use this tool. You can simply download the pre-built executable:
+
+1. Go to the [Releases page](https://github.com/YingLuoNou/EInk-Image-Toolkit/releases/latest).
+2. Download the latest `EInk-Image-Toolkit.exe` from the **Assets** section.
+3. Double-click to run! No installation required.
+
+> **Note**: Because it's packed into a single executable, it might take a few seconds to extract resources upon the first launch. If your antivirus flags it, please allow it to run or add it to the whitelist.
+
+---
+
+### 👨‍💻 For Developers (Run from source)
 
 This project uses [uv](https://github.com/astral-sh/uv), an extremely fast Python package installer and resolver written in Rust. 
 

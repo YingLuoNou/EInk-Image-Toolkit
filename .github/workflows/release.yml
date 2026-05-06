@@ -1,0 +1,45 @@
+name: Build and Release EXE
+
+on:
+  push:
+    tags:
+      - 'v*' # 只有当你推送 v1.0.0 这种格式的 tag 时才会触发
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    # 赋予 GITHUB_TOKEN 创建 Release 的权限
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          enable-cache: true 
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml" # uv 环境通常可以直接从这里读取，或者改为 python-version: "3.11"
+
+      - name: Install Dependencies
+        # 同步安装所有依赖，包括你刚才添加的 pyinstaller 等 dev 依赖
+        run: uv sync --all-extras --dev 
+
+      - name: Build EInk-Image-Toolkit EXE
+        run: |
+          # 针对你的 main.py 进行打包
+          # 如果你的程序涉及特定 UI 框架（如 PyQt/Tkinter）或图像库（如 Pillow），通常 --onefile 就能自动处理
+          uv run pyinstaller --noconsole --onefile --name "EInk-Image-Toolkit" main.py
+        
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/EInk-Image-Toolkit.exe
+          generate_release_notes: true
