@@ -3,13 +3,13 @@ name: Build and Release EXE
 on:
   push:
     tags:
-      - 'v*' # 只有当你推送 v1.0.0 这种格式的 tag 时才会触发
+      - 'v*' # 仅在推送类似 v1.0.0 的 tag 时触发流水线
 
 jobs:
   build-windows:
     runs-on: windows-latest
     
-    # 赋予 GITHUB_TOKEN 创建 Release 的权限
+    # 赋予 GitHub Actions 创建 Release 和上传文件的权限
     permissions:
       contents: write
 
@@ -26,16 +26,19 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version-file: "pyproject.toml" # uv 环境通常可以直接从这里读取，或者改为 python-version: "3.11"
+          python-version-file: "pyproject.toml"
+
+      - name: Install UPX for compression
+        run: choco install upx --no-progress
 
       - name: Install Dependencies
-        # 同步安装所有依赖，包括你刚才添加的 pyinstaller 等 dev 依赖
+        # 使用 uv 严格按照你的 pyproject.toml 同步安装所需依赖
         run: uv sync --all-extras --dev 
 
       - name: Build EInk-Image-Toolkit EXE
         run: |
-          # 针对你的 main.py 进行打包
-          # 如果你的程序涉及特定 UI 框架（如 PyQt/Tkinter）或图像库（如 Pillow），通常 --onefile 就能自动处理
+          # 自动调用 UPX 进行高强度压缩，大幅减小最终生成的 .exe 体积
+          # --noconsole 隐藏黑框，--onefile 打包为独立单文件
           uv run pyinstaller --noconsole --onefile --name "EInk-Image-Toolkit" main.py
         
       - name: Upload Release Asset
